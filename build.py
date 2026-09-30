@@ -18,9 +18,16 @@ out = f'''<!doctype html>
 </head>
 <body>
 {body}
-<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {{}});</script>
+<script>if ('serviceWorker' in navigator && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => {{}});</script>
 </body>
 </html>
 '''
 open('index.html', 'w', encoding='utf-8').write(out)
 print('index.html built', len(out))
+
+# www/ is the web bundle the Android app (Capacitor) ships.
+import os, shutil
+os.makedirs('www', exist_ok=True)
+for f in ['index.html', 'manifest.webmanifest', 'sw.js', 'icon.svg', 'icon-192.png', 'icon-512.png']:
+    shutil.copy(f, os.path.join('www', f))
+print('www/ ready')

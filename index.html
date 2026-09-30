@@ -34,6 +34,9 @@
   --dead-line:#D2A0A8;
   --dead-glow:rgba(123,21,38,.28);
   --scrim:rgba(10,24,34,.36);
+  --fx-ring:rgba(52,112,160,.42);
+  --fx-glint:rgba(255,255,255,.95);
+  --film-op:.55;
   --shadow:0 12px 32px rgba(15,34,48,.14);
   --f-display:"Unbounded","Manrope",system-ui,sans-serif;
   --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -45,6 +48,7 @@
     --bubble-text:#E4F0F8; --bubble-rim:rgba(190,225,255,.5);
     --dead:#C0344A; --dead-bg:#1E0A10; --dead-fg:#F1CDD3; --dead-line:#5E1A26; --dead-glow:rgba(170,30,55,.35);
     --scrim:rgba(0,0,0,.55); --shadow:0 12px 32px rgba(0,0,0,.45);
+    --fx-ring:rgba(150,205,245,.34); --fx-glint:rgba(225,242,255,.8); --film-op:.35;
     color-scheme:dark;
   }
 }
@@ -54,6 +58,7 @@
   --bubble-text:#E4F0F8; --bubble-rim:rgba(190,225,255,.5);
   --dead:#C0344A; --dead-bg:#1E0A10; --dead-fg:#F1CDD3; --dead-line:#5E1A26; --dead-glow:rgba(170,30,55,.35);
   --scrim:rgba(0,0,0,.55); --shadow:0 12px 32px rgba(0,0,0,.45);
+  --fx-ring:rgba(150,205,245,.34); --fx-glint:rgba(225,242,255,.8); --film-op:.35;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -77,7 +82,7 @@ button{font:inherit;color:inherit}
 
 main{flex:1;position:relative;min-height:0}
 .view{position:absolute;inset:0}
-#board{overflow:hidden;background:radial-gradient(120% 90% at 20% 0%,var(--board-a),transparent 60%),radial-gradient(90% 80% at 100% 100%,var(--board-a),transparent 55%),var(--board-b)}
+#board{overflow:hidden;isolation:isolate;background:radial-gradient(120% 90% at 20% 0%,var(--board-a),transparent 60%),radial-gradient(90% 80% at 100% 100%,var(--board-a),transparent 55%),var(--board-b)}
 .legend{position:absolute;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));font-size:12px;color:var(--muted);pointer-events:none;max-width:60%}
 .banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 14px;font-size:13px;box-shadow:var(--shadow);white-space:nowrap;max-width:calc(100% - 32px)}
 .banner button{border:0;background:var(--bg);border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:600;font-size:12px}
@@ -115,19 +120,31 @@ main{flex:1;position:relative;min-height:0}
 .fab{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-fg);font-size:30px;line-height:1;cursor:pointer;box-shadow:var(--shadow);display:grid;place-items:center}
 .fab:active{transform:scale(.95)}
 
-/* graveyard */
-#grave{overflow-y:auto;padding:20px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.film{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;opacity:var(--film-op)}
+.film i{position:absolute;width:70vmax;height:70vmax;border-radius:50%;left:var(--x);top:var(--y);margin:-35vmax 0 0 -35vmax;background:radial-gradient(circle,hsla(var(--fh),85%,68%,.55),hsla(var(--fh),85%,68%,0) 62%);animation:float var(--fd) ease-in-out infinite alternate}
+.film i:nth-child(1){--x:15%;--y:20%;--fh:195;--fd:34s}
+.film i:nth-child(2){--x:85%;--y:35%;--fh:255;--fd:41s;animation-delay:-12s}
+.film i:nth-child(3){--x:40%;--y:95%;--fh:175;--fd:47s;animation-delay:-20s}
+.film i:nth-child(4){--x:75%;--y:85%;--fh:290;--fd:39s;animation-delay:-7s;opacity:.6}
+@keyframes float{0%{transform:translate(0,0) scale(1)}50%{transform:translate(8vmax,-6vmax) scale(1.15)}100%{transform:translate(-6vmax,5vmax) scale(.9)}}
+
+/* graveyard: always a dark scene, whatever the theme */
+#grave{--dead:#C0344A;--dead-bg:rgba(34,8,14,.82);--dead-fg:#F1CDD3;--dead-line:#6A1C2A;--dead-glow:rgba(190,30,60,.28);
+  color:#E9D3D7;background:radial-gradient(120% 70% at 50% -10%,#3A0F1A,transparent 60%),radial-gradient(90% 60% at 50% 115%,#2A0A12,transparent 60%),#0E0609;overflow:hidden;isolation:isolate}
+#grave::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(130% 100% at 50% 40%,transparent 55%,rgba(0,0,0,.6))}
+.gscroll{position:absolute;inset:0;z-index:2;overflow-y:auto;padding:20px 16px calc(24px + env(safe-area-inset-bottom,0px))}
 .gwrap{max-width:720px;margin:0 auto}
 .gwrap h1{font:500 20px/1.2 var(--f-display);margin:0 0 4px;text-wrap:balance}
-.gwrap > p{margin:0 0 18px;color:var(--muted)}
+.gwrap > p{margin:0 0 18px;color:#B89AA0}
 .glist{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
-.gcard{background:var(--dead-bg);color:var(--dead-fg);border:1px solid var(--dead-line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 0 0 1px var(--dead-glow),0 6px 22px var(--dead-glow);min-width:0}
+.gcard{background:var(--dead-bg);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:var(--dead-fg);border:1px solid var(--dead-line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 0 0 1px var(--dead-glow),0 6px 22px var(--dead-glow);min-width:0}
 .gcard h3{margin:0;font-size:16px;line-height:1.3;overflow-wrap:anywhere}
 .gcard .gm{font-size:13px;opacity:.8;font-variant-numeric:tabular-nums}
 .gcard .ga{display:flex;gap:8px;margin-top:2px}
 .gcard button{border:1px solid var(--dead-line);background:transparent;color:var(--dead-fg);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer}
 .gcard button.rv{background:var(--dead);border-color:var(--dead);color:#fff}
-.gempty{color:var(--muted);padding:40px 0;text-align:center}
+.gempty{color:#B89AA0;padding:40px 0;text-align:center}
 .dots{letter-spacing:2px;font-size:11px}
 
 /* sheets */
@@ -167,7 +184,7 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
 @media (max-width:420px){.legend .wide{display:none}.brand span{display:none}.seg button{padding:6px 10px}}
-@media (prefers-reduced-motion:reduce){.skin::before,.bubble.urgent .skin{animation:none}.sheet,.scrim,.toast{transition:none}}
+@media (prefers-reduced-motion:reduce){.film i{animation:none}.skin::before,.bubble.urgent .skin{animation:none}.sheet,.scrim,.toast{transition:none}}
 </style>
 </head>
 <body>
@@ -184,17 +201,20 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
   </header>
   <main>
     <section id="board" class="view" role="tabpanel" aria-label="Доска задач">
+      <div class="film" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <canvas class="fx" id="fx-board" aria-hidden="true"></canvas>
       <div class="banner" id="banner" hidden>Это примеры задач <button type="button" id="clearEx">Убрать</button></div>
       <div class="empty" id="empty" hidden><div><strong>Доска пуста</strong>Нажмите «+», чтобы надуть первый пузырь.</div></div>
       <p class="legend">Размер пузыря — важность и близость дедлайна.<span class="wide"> Пузыри можно перетаскивать.</span></p>
       <button class="fab" id="fab" type="button" aria-label="Добавить задачу">+</button>
     </section>
     <section id="grave" class="view" role="tabpanel" aria-label="Мёртвые задачи" hidden>
-      <div class="gwrap">
+      <canvas class="fx" id="fx-grave" aria-hidden="true"></canvas>
+      <div class="gscroll"><div class="gwrap">
         <h1>Мёртвые задачи</h1>
         <p>Пузыри, которые лопнули, потому что дедлайн прошёл. Задачу можно воскресить с новым сроком.</p>
         <div class="glist" id="glist"></div>
-      </div>
+      </div></div>
     </section>
   </main>
 </div>
@@ -472,8 +492,79 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
     if (changed) { save(); counts(); renderGrave(); }
   }
 
+  // ---------- ambient backgrounds ----------
+  // board: small soap bubbles rising through the water; graveyard: shards of burst bubbles sinking like ash
+  const fx = { board: { c: $('#fx-board'), p: [] }, grave: { c: $('#fx-grave'), p: [] } };
+  let fxTok = 0, ring = '', glint = '';
+  function fxSize(f){
+    const dpr = Math.min(2, devicePixelRatio || 1), w = f.c.clientWidth, h = f.c.clientHeight;
+    if (!w || !h) return false;
+    if (f.w !== w || f.h !== h) { f.w = w; f.h = h; f.c.width = w * dpr; f.c.height = h * dpr; f.ctx = f.c.getContext('2d'); f.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); f.p = []; }
+    return true;
+  }
+  function riser(f, anywhere){
+    const z = Math.random();                       // depth: 0 far, 1 near
+    return { x: Math.random() * f.w, y: anywhere ? Math.random() * f.h : f.h + 30, r: 2 + z * z * 20, z, sp: 0.12 + z * 0.45, ph: Math.random() * 6.3, wob: 0.3 + Math.random() * 0.7, life: 0 };
+  }
+  function shard(f, anywhere){
+    const z = Math.random();
+    return { x: Math.random() * f.w, y: anywhere ? Math.random() * f.h : -30, r: 8 + z * 42, z, sp: 0.05 + z * 0.22, a0: Math.random() * 6.3, span: 0.5 + Math.random() * 1.6, rot: (Math.random() - 0.5) * 0.004, ph: Math.random() * 6.3, ember: Math.random() < 0.35 };
+  }
+  function drawBoardFx(f, t, still){
+    if (!fxSize(f)) return;
+    const n = Math.round(Math.min(70, f.w * f.h / 14000));
+    while (f.p.length < n) f.p.push(riser(f, true));
+    const x = f.ctx; x.clearRect(0, 0, f.w, f.h);
+    for (let i = 0; i < f.p.length; i++) {
+      const b = f.p[i];
+      if (!still) { b.y -= b.sp; b.x += Math.sin(t * 0.0012 * b.wob + b.ph) * 0.25 * b.wob; }
+      if (b.y < -b.r - 10) { f.p[i] = riser(f, false); continue; }
+      const top = Math.min(1, (b.y + b.r) / (f.h * 0.25));    // fade near the surface
+      x.globalAlpha = (0.25 + b.z * 0.6) * top;
+      x.lineWidth = 0.8 + b.z * 0.9;
+      x.strokeStyle = ring;
+      x.beginPath(); x.arc(b.x, b.y, b.r, 0, 6.2832); x.stroke();
+      x.fillStyle = glint;
+      x.beginPath(); x.arc(b.x - b.r * 0.38, b.y - b.r * 0.4, Math.max(0.7, b.r * 0.16), 0, 6.2832); x.fill();
+    }
+    x.globalAlpha = 1;
+  }
+  function drawGraveFx(f, t, still){
+    if (!fxSize(f)) return;
+    const n = Math.round(Math.min(45, f.w * f.h / 20000));
+    while (f.p.length < n) f.p.push(shard(f, true));
+    const x = f.ctx; x.clearRect(0, 0, f.w, f.h);
+    for (let i = 0; i < f.p.length; i++) {
+      const s = f.p[i];
+      if (!still) { s.y += s.sp; s.x += Math.sin(t * 0.0006 + s.ph) * 0.15; s.a0 += s.rot; }
+      if (s.y > f.h + s.r + 10) { f.p[i] = shard(f, false); continue; }
+      const flick = 0.75 + 0.25 * Math.sin(t * 0.002 + s.ph);
+      if (s.ember) {
+        x.globalAlpha = (0.35 + s.z * 0.55) * flick;
+        x.fillStyle = 'rgb(230,70,90)';
+        x.beginPath(); x.arc(s.x, s.y, 1 + s.z * 2, 0, 6.2832); x.fill();
+      } else {
+        x.globalAlpha = (0.22 + s.z * 0.45) * flick;
+        x.strokeStyle = 'rgb(200,60,82)';
+        x.lineWidth = 1 + s.z * 1.4;
+        x.beginPath(); x.arc(s.x, s.y, s.r, s.a0, s.a0 + s.span); x.stroke();
+      }
+    }
+    x.globalAlpha = 1;
+  }
+  let fxDrawnStill = '';
+  function drawFx(time){
+    if (time - fxTok > 1000 || !ring) { const cs = getComputedStyle(document.documentElement); ring = cs.getPropertyValue('--fx-ring').trim() || 'rgba(120,180,230,.4)'; glint = cs.getPropertyValue('--fx-glint').trim() || '#fff'; fxTok = time; }
+    if (reduce) {                              // one still frame per view
+      const key = view + (view === 'board' ? fx.board.c.clientWidth : fx.grave.c.clientWidth);
+      if (fxDrawnStill === key) return; fxDrawnStill = key;
+    }
+    if (view === 'board') drawBoardFx(fx.board, time, reduce); else drawGraveFx(fx.grave, time, reduce);
+  }
+
   let lastT = 0;
   function frame(time){
+    drawFx(time);
     const now = Date.now();
     expire(now);
     if (view === 'board' && W) {
@@ -639,6 +730,14 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
     clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
   }
 
+  // Android back button (native app only): close a sheet, then leave the graveyard, then exit
+  const capApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  if (capApp) capApp.addListener('backButton', () => {
+    if (!$('#form').hidden || !$('#detail').hidden) closeSheets();
+    else if (view === 'grave') setView('board');
+    else capApp.exitApp();
+  });
+
   // ---------- start ----------
   let saved = 'board';
   try { saved = localStorage.getItem(KEY + '.view') || 'board'; } catch (e) {}
@@ -653,6 +752,6 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
 })();
 </script>
 
-<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+<script>if ('serviceWorker' in navigator && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
 </body>
 </html>

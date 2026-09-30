@@ -1,0 +1,9 @@
+{
+  "appId": "com.svetoforovich.tasky",
+  "appName": "Tasky",
+  "webDir": "www",
+  "backgroundColor": "#08121A",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto"
+  }
+}
