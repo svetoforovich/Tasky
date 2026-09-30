@@ -24,8 +24,6 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
-
       - name: Build web bundle and sync into Android project
         run: |
           npm ci
