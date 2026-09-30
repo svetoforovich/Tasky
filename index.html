@@ -36,7 +36,10 @@
   --scrim:rgba(10,24,34,.36);
   --fx-ring:rgba(52,112,160,.42);
   --fx-glint:rgba(255,255,255,.95);
-  --film-op:.55;
+  --sky-1:#B7D9EE; --sky-2:#E3F2F8; --sun:rgba(255,255,255,.95);
+  --hill-1:#A6C9DD; --hill-2:#8CBACE; --tree:#78A9BE; --grass-1:#A3D3C8; --grass-2:#7DB6AE;
+  --kid:#557C99; --kid-2:#6E9CC4; --kid-3:#6FB0B5;
+  --veil:rgba(232,242,248,.28); --bubble-fill:rgba(240,248,252,.34);
   --shadow:0 12px 32px rgba(15,34,48,.14);
   --f-display:"Unbounded","Manrope",system-ui,sans-serif;
   --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -48,7 +51,11 @@
     --bubble-text:#E4F0F8; --bubble-rim:rgba(190,225,255,.5);
     --dead:#C0344A; --dead-bg:#1E0A10; --dead-fg:#F1CDD3; --dead-line:#5E1A26; --dead-glow:rgba(170,30,55,.35);
     --scrim:rgba(0,0,0,.55); --shadow:0 12px 32px rgba(0,0,0,.45);
-    --fx-ring:rgba(150,205,245,.34); --fx-glint:rgba(225,242,255,.8); --film-op:.35;
+    --fx-ring:rgba(150,205,245,.34); --fx-glint:rgba(225,242,255,.8);
+    --sky-1:#0A1826; --sky-2:#1A3850; --sun:rgba(200,225,255,.55);
+    --hill-1:#132C40; --hill-2:#0F2334; --tree:#0D1F2E; --grass-1:#11303A; --grass-2:#0B2029;
+    --kid:#33597A; --kid-2:#42698F; --kid-3:#3A7580;
+    --veil:rgba(6,14,22,.3); --bubble-fill:rgba(8,20,30,.34);
     color-scheme:dark;
   }
 }
@@ -58,7 +65,11 @@
   --bubble-text:#E4F0F8; --bubble-rim:rgba(190,225,255,.5);
   --dead:#C0344A; --dead-bg:#1E0A10; --dead-fg:#F1CDD3; --dead-line:#5E1A26; --dead-glow:rgba(170,30,55,.35);
   --scrim:rgba(0,0,0,.55); --shadow:0 12px 32px rgba(0,0,0,.45);
-  --fx-ring:rgba(150,205,245,.34); --fx-glint:rgba(225,242,255,.8); --film-op:.35;
+  --fx-ring:rgba(150,205,245,.34); --fx-glint:rgba(225,242,255,.8);
+    --sky-1:#0A1826; --sky-2:#1A3850; --sun:rgba(200,225,255,.55);
+    --hill-1:#132C40; --hill-2:#0F2334; --tree:#0D1F2E; --grass-1:#11303A; --grass-2:#0B2029;
+    --kid:#33597A; --kid-2:#42698F; --kid-3:#3A7580;
+    --veil:rgba(6,14,22,.3); --bubble-fill:rgba(8,20,30,.34);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -83,7 +94,7 @@ button{font:inherit;color:inherit}
 main{flex:1;position:relative;min-height:0}
 .view{position:absolute;inset:0}
 #board{overflow:hidden;isolation:isolate;background:radial-gradient(120% 90% at 20% 0%,var(--board-a),transparent 60%),radial-gradient(90% 80% at 100% 100%,var(--board-a),transparent 55%),var(--board-b)}
-.legend{position:absolute;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));font-size:12px;color:var(--muted);pointer-events:none;max-width:60%}
+.legend{position:absolute;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));margin:0;font-size:12px;color:var(--muted);pointer-events:none;max-width:60%;z-index:4;background:color-mix(in srgb,var(--surface) 72%,transparent);padding:4px 10px;border-radius:10px}
 .banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 14px;font-size:13px;box-shadow:var(--shadow);white-space:nowrap;max-width:calc(100% - 32px)}
 .banner button{border:0;background:var(--bg);border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:600;font-size:12px}
 .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:0 32px;color:var(--muted);pointer-events:none}
@@ -92,11 +103,12 @@ main{flex:1;position:relative;min-height:0}
 /* bubbles */
 .bubble{position:absolute;left:0;top:0;padding:0;border:0;background:none;border-radius:50%;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;will-change:transform;color:var(--bubble-text)}
 .bubble.dragging{cursor:grabbing;z-index:3}
-.skin{position:absolute;inset:0;border-radius:50%;
+.skin{position:absolute;inset:0;border-radius:50%;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
   background:
     radial-gradient(circle at 31% 25%,rgba(255,255,255,.95) 0 4%,rgba(255,255,255,0) 11%),
     radial-gradient(circle at 70% 79%,rgba(255,255,255,.45) 0 2.5%,rgba(255,255,255,0) 8%),
-    radial-gradient(circle at 50% 50%,hsla(var(--h),80%,72%,.05) 0 50%,hsla(var(--h),85%,62%,.22) 72%,hsla(calc(var(--h) + 55),90%,72%,.5) 92%,var(--bubble-rim) 100%);
+    radial-gradient(circle at 50% 50%,hsla(var(--h),80%,72%,.05) 0 50%,hsla(var(--h),85%,62%,.22) 72%,hsla(calc(var(--h) + 55),90%,72%,.5) 92%,var(--bubble-rim) 100%),
+    var(--bubble-fill);
   box-shadow:inset 0 0 0 1px hsla(var(--h),80%,80%,.45),inset -8px -12px 26px hsla(calc(var(--h) + 45),90%,70%,.22),0 10px 26px hsla(var(--h),60%,35%,.12)}
 .skin::before{content:"";position:absolute;inset:0;border-radius:50%;
   background:conic-gradient(from 0deg,hsla(190,90%,70%,.55),hsla(260,85%,75%,.5),hsla(320,80%,78%,.35),hsla(170,85%,70%,.5),hsla(190,90%,70%,.55));
@@ -121,13 +133,16 @@ main{flex:1;position:relative;min-height:0}
 .fab:active{transform:scale(.95)}
 
 .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-.film{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;opacity:var(--film-op)}
-.film i{position:absolute;width:70vmax;height:70vmax;border-radius:50%;left:var(--x);top:var(--y);margin:-35vmax 0 0 -35vmax;background:radial-gradient(circle,hsla(var(--fh),85%,68%,.55),hsla(var(--fh),85%,68%,0) 62%);animation:float var(--fd) ease-in-out infinite alternate}
-.film i:nth-child(1){--x:15%;--y:20%;--fh:195;--fd:34s}
-.film i:nth-child(2){--x:85%;--y:35%;--fh:255;--fd:41s;animation-delay:-12s}
-.film i:nth-child(3){--x:40%;--y:95%;--fh:175;--fd:47s;animation-delay:-20s}
-.film i:nth-child(4){--x:75%;--y:85%;--fh:290;--fd:39s;animation-delay:-7s;opacity:.6}
-@keyframes float{0%{transform:translate(0,0) scale(1)}50%{transform:translate(8vmax,-6vmax) scale(1.15)}100%{transform:translate(-6vmax,5vmax) scale(.9)}}
+.scene{position:absolute;inset:-24px;pointer-events:none;z-index:0;filter:blur(7px) saturate(1.05)}
+.scene svg{position:absolute;display:block}
+.scene .sky{inset:0;width:100%;height:100%}
+.scene .kid{bottom:calc(24px + 5%);height:min(40%,380px);width:auto;aspect-ratio:1/2}
+.scene .kid.k1{left:calc(24px + 3%)}
+.scene .kid.k2{right:calc(24px + 4%);bottom:calc(24px + 9%);height:min(36%,340px)}
+.scene .tree{bottom:calc(24px + 12%);height:min(46%,440px);width:auto;aspect-ratio:3/4}
+.scene .tree.t1{left:-2%}
+.scene .tree.t2{right:-4%;height:min(38%,360px)}
+.veil{position:absolute;inset:0;pointer-events:none;z-index:0;background:var(--veil)}
 
 /* graveyard: always a dark scene, whatever the theme */
 #grave{--dead:#C0344A;--dead-bg:rgba(34,8,14,.82);--dead-fg:#F1CDD3;--dead-line:#6A1C2A;--dead-glow:rgba(190,30,60,.28);
@@ -184,7 +199,7 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
 @media (max-width:420px){.legend .wide{display:none}.brand span{display:none}.seg button{padding:6px 10px}}
-@media (prefers-reduced-motion:reduce){.film i{animation:none}.skin::before,.bubble.urgent .skin{animation:none}.sheet,.scrim,.toast{transition:none}}
+@media (prefers-reduced-motion:reduce){.skin::before,.bubble.urgent .skin{animation:none}.sheet,.scrim,.toast{transition:none}}
 </style>
 </head>
 <body>
@@ -201,7 +216,46 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
   </header>
   <main>
     <section id="board" class="view" role="tabpanel" aria-label="Доска задач">
-      <div class="film" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="scene" aria-hidden="true">
+        <svg class="sky" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sky-1)"/><stop offset=".7" style="stop-color:var(--sky-2)"/></linearGradient>
+            <radialGradient id="g-sun"><stop offset="0" style="stop-color:var(--sun)"/><stop offset="1" style="stop-color:var(--sky-2);stop-opacity:0"/></radialGradient>
+            <linearGradient id="g-grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--grass-1)"/><stop offset="1" style="stop-color:var(--grass-2)"/></linearGradient>
+          </defs>
+          <rect width="100" height="100" fill="url(#g-sky)"/>
+          <ellipse cx="74" cy="22" rx="30" ry="18" fill="url(#g-sun)"/>
+          <path d="M0 64 Q18 52 36 60 T70 56 T100 58 V100 H0Z" style="fill:var(--hill-1)"/>
+          <path d="M0 72 Q24 64 48 70 T100 66 V100 H0Z" style="fill:var(--hill-2)"/>
+          <path d="M0 80 Q30 75 60 79 T100 77 V100 H0Z" fill="url(#g-grass)"/>
+        </svg>
+        <svg class="tree t1" viewBox="0 0 150 200"><g style="fill:var(--tree)"><rect x="66" y="110" width="16" height="90" rx="6"/><circle cx="74" cy="70" r="52"/><circle cx="40" cy="96" r="34"/><circle cx="110" cy="92" r="38"/></g></svg>
+        <svg class="tree t2" viewBox="0 0 150 200"><g style="fill:var(--tree)"><rect x="68" y="120" width="14" height="80" rx="6"/><circle cx="76" cy="80" r="48"/><circle cx="112" cy="104" r="32"/><circle cx="44" cy="108" r="30"/></g></svg>
+        <svg class="kid k1" viewBox="0 0 100 200">
+          <g fill="none" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--kid)">
+            <path d="M44 122 L42 180 M56 122 L59 180" stroke-width="9"/>
+            <path d="M40 66 L33 102" stroke-width="8"/>
+            <path d="M60 66 L74 54 L68 44" stroke-width="8"/>
+            <path d="M68 44 L84 28" stroke-width="2.5"/>
+            <circle cx="89" cy="23" r="7" stroke-width="2.5"/>
+          </g>
+          <path d="M39 58 H61 L70 126 H30Z" style="fill:var(--kid-2)"/>
+          <circle cx="50" cy="40" r="16" style="fill:var(--kid)"/>
+          <path d="M34 36 Q38 18 56 22 Q66 26 66 36 Q56 28 44 32Z" style="fill:var(--kid)"/>
+          <circle cx="30" cy="30" r="6" style="fill:var(--kid)"/>
+          <ellipse cx="50" cy="186" rx="20" ry="4" style="fill:var(--kid);opacity:.35"/>
+        </svg>
+        <svg class="kid k2" viewBox="0 0 100 200">
+          <g fill="none" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--kid)">
+            <path d="M40 66 L28 38 L24 16 M60 66 L72 38 L78 18" stroke-width="8"/>
+            <path d="M44 112 L36 142 L44 166 M56 112 L68 138 L62 164" stroke-width="9"/>
+          </g>
+          <rect x="38" y="58" width="24" height="58" rx="9" style="fill:var(--kid-3)"/>
+          <circle cx="50" cy="42" r="15" style="fill:var(--kid)"/>
+          <ellipse cx="50" cy="192" rx="18" ry="3.5" style="fill:var(--kid);opacity:.3"/>
+        </svg>
+      </div>
+      <div class="veil" aria-hidden="true"></div>
       <canvas class="fx" id="fx-board" aria-hidden="true"></canvas>
       <div class="banner" id="banner" hidden>Это примеры задач <button type="button" id="clearEx">Убрать</button></div>
       <div class="empty" id="empty" hidden><div><strong>Доска пуста</strong>Нажмите «+», чтобы надуть первый пузырь.</div></div>
@@ -502,8 +556,17 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
     if (f.w !== w || f.h !== h) { f.w = w; f.h = h; f.c.width = w * dpr; f.c.height = h * dpr; f.ctx = f.c.getContext('2d'); f.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); f.p = []; }
     return true;
   }
+  let wand = null;                                  // where the left child's bubble wand is, in board coordinates
+  function findWand(){
+    const k = document.querySelector('.kid.k1'); if (!k) return;
+    const r = k.getBoundingClientRect(), br = board.getBoundingClientRect();
+    if (r.width) wand = { x: r.left - br.left + r.width * 0.89, y: r.top - br.top + r.height * 0.115 };
+  }
+  new ResizeObserver(findWand).observe(board);
   function riser(f, anywhere){
     const z = Math.random();                       // depth: 0 far, 1 near
+    if (wand && !anywhere && Math.random() < 0.55)
+      return { x: wand.x, y: wand.y, r: 3 + z * z * 16, z, sp: 0.25 + z * 0.4, vx: 0.4 + Math.random() * 0.9, ph: Math.random() * 6.3, wob: 0.3 + Math.random() * 0.7 };
     return { x: Math.random() * f.w, y: anywhere ? Math.random() * f.h : f.h + 30, r: 2 + z * z * 20, z, sp: 0.12 + z * 0.45, ph: Math.random() * 6.3, wob: 0.3 + Math.random() * 0.7, life: 0 };
   }
   function shard(f, anywhere){
@@ -512,13 +575,13 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
   }
   function drawBoardFx(f, t, still){
     if (!fxSize(f)) return;
-    const n = Math.round(Math.min(70, f.w * f.h / 14000));
+    const n = Math.round(Math.min(48, f.w * f.h / 16000));
     while (f.p.length < n) f.p.push(riser(f, true));
     const x = f.ctx; x.clearRect(0, 0, f.w, f.h);
     for (let i = 0; i < f.p.length; i++) {
       const b = f.p[i];
-      if (!still) { b.y -= b.sp; b.x += Math.sin(t * 0.0012 * b.wob + b.ph) * 0.25 * b.wob; }
-      if (b.y < -b.r - 10) { f.p[i] = riser(f, false); continue; }
+      if (!still) { b.y -= b.sp; b.x += Math.sin(t * 0.0012 * b.wob + b.ph) * 0.25 * b.wob + (b.vx || 0); if (b.vx) b.vx *= 0.996; }
+      if (b.y < -b.r - 10 || b.x > f.w + b.r + 10) { f.p[i] = riser(f, false); continue; }
       const top = Math.min(1, (b.y + b.r) / (f.h * 0.25));    // fade near the surface
       x.globalAlpha = (0.25 + b.z * 0.6) * top;
       x.lineWidth = 0.8 + b.z * 0.9;
