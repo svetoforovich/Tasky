@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1D28">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<title>Tasky</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap">
+<style>
+/* Layout: one-screen app. Top bar with view switch, full-bleed "water surface" board where bubbles drift, floating add button, bottom sheets for forms. */
+:root{
+  --bg:#E4EDF3;
+  --surface:#F5F9FB;
+  --fg:#0F2230;
+  --muted:#587084;
+  --line:#C9D7E1;
+  --accent:#2870A6;
+  --accent-fg:#FFFFFF;
+  --board-a:#D3E5F0;
+  --board-b:#EEF4F8;
+  --bubble-text:#0C1F2D;
+  --bubble-rim:rgba(255,255,255,.8);
+  --dead:#7B1526;
+  --dead-bg:#F4E4E7;
+  --dead-fg:#4B0B16;
+  --dead-line:#D2A0A8;
+  --dead-glow:rgba(123,21,38,.28);
+  --scrim:rgba(10,24,34,.36);
+  --shadow:0 12px 32px rgba(15,34,48,.14);
+  --f-display:"Unbounded","Manrope",system-ui,sans-serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#08121A; --surface:#0F1D28; --fg:#D8E5EE; --muted:#7D94A6; --line:#1D3141;
+    --accent:#5AADE2; --accent-fg:#051019; --board-a:#0E2433; --board-b:#08121A;
+    --bubble-text:#E4F0F8; --bubble-rim:rgba(190,225,255,.5);
+    --dead:#C0344A; --dead-bg:#1E0A10; --dead-fg:#F1CDD3; --dead-line:#5E1A26; --dead-glow:rgba(170,30,55,.35);
+    --scrim:rgba(0,0,0,.55); --shadow:0 12px 32px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#08121A; --surface:#0F1D28; --fg:#D8E5EE; --muted:#7D94A6; --line:#1D3141;
+  --accent:#5AADE2; --accent-fg:#051019; --board-a:#0E2433; --board-b:#08121A;
+  --bubble-text:#E4F0F8; --bubble-rim:rgba(190,225,255,.5);
+  --dead:#C0344A; --dead-bg:#1E0A10; --dead-fg:#F1CDD3; --dead-line:#5E1A26; --dead-glow:rgba(170,30,55,.35);
+  --scrim:rgba(0,0,0,.55); --shadow:0 12px 32px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{height:100%;box-sizing:border-box}
+body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body);-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{height:100%;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand{font:600 18px/1 var(--f-display);letter-spacing:.01em;display:flex;align-items:center;gap:8px;margin-right:auto}
+.brand i{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0 18%,transparent 30%),radial-gradient(circle,rgba(90,173,226,.15) 50%,rgba(90,173,226,.7) 90%,rgba(170,140,240,.8));box-shadow:inset 0 0 0 1px rgba(90,173,226,.5)}
+.seg{display:flex;background:var(--bg);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:999px;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center;white-space:nowrap}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.seg b{font-weight:700;font-variant-numeric:tabular-nums;font-size:12px;min-width:18px;padding:1px 6px;border-radius:999px;background:var(--line);color:var(--fg)}
+.seg b.deadc{background:var(--dead);color:#fff}
+.seg b:empty{display:none}
+.donec{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+main{flex:1;position:relative;min-height:0}
+.view{position:absolute;inset:0}
+#board{overflow:hidden;background:radial-gradient(120% 90% at 20% 0%,var(--board-a),transparent 60%),radial-gradient(90% 80% at 100% 100%,var(--board-a),transparent 55%),var(--board-b)}
+.legend{position:absolute;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));font-size:12px;color:var(--muted);pointer-events:none;max-width:60%}
+.banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 14px;font-size:13px;box-shadow:var(--shadow);white-space:nowrap;max-width:calc(100% - 32px)}
+.banner button{border:0;background:var(--bg);border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:600;font-size:12px}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:0 32px;color:var(--muted);pointer-events:none}
+.empty strong{display:block;font:500 17px/1.3 var(--f-display);color:var(--fg);margin-bottom:6px}
+
+/* bubbles */
+.bubble{position:absolute;left:0;top:0;padding:0;border:0;background:none;border-radius:50%;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;will-change:transform;color:var(--bubble-text)}
+.bubble.dragging{cursor:grabbing;z-index:3}
+.skin{position:absolute;inset:0;border-radius:50%;
+  background:
+    radial-gradient(circle at 31% 25%,rgba(255,255,255,.95) 0 4%,rgba(255,255,255,0) 11%),
+    radial-gradient(circle at 70% 79%,rgba(255,255,255,.45) 0 2.5%,rgba(255,255,255,0) 8%),
+    radial-gradient(circle at 50% 50%,hsla(var(--h),80%,72%,.05) 0 50%,hsla(var(--h),85%,62%,.22) 72%,hsla(calc(var(--h) + 55),90%,72%,.5) 92%,var(--bubble-rim) 100%);
+  box-shadow:inset 0 0 0 1px hsla(var(--h),80%,80%,.45),inset -8px -12px 26px hsla(calc(var(--h) + 45),90%,70%,.22),0 10px 26px hsla(var(--h),60%,35%,.12)}
+.skin::before{content:"";position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg,hsla(190,90%,70%,.55),hsla(260,85%,75%,.5),hsla(320,80%,78%,.35),hsla(170,85%,70%,.5),hsla(190,90%,70%,.55));
+  -webkit-mask:radial-gradient(circle,transparent 64%,#000 97%);mask:radial-gradient(circle,transparent 64%,#000 97%);
+  animation:spin 14s linear infinite;opacity:.8}
+.bubble.urgent .skin{animation:wobble 1.1s ease-in-out infinite}
+.label{position:absolute;inset:12%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;gap:2px}
+.bt{font-weight:700;line-height:1.15;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto}
+.bl{opacity:.72;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bubble.urgent .bl{opacity:1;color:var(--dead)}
+.bubble.pop .skin{animation:pop .32s cubic-bezier(.3,.6,.4,1) forwards}
+.bubble.pop .label{transition:opacity .12s;opacity:0}
+.bubble.done .skin,.bubble.done .label{animation:rise .9s cubic-bezier(.3,.6,.3,1) forwards}
+.drop{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 35% 35%,#fff,hsla(var(--h),80%,70%,.7))}
+.ring{position:absolute;left:0;top:0;border-radius:50%;pointer-events:none;border:2px solid hsla(var(--h),80%,75%,.8)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes wobble{0%,100%{transform:scale(1,1)}30%{transform:scale(1.035,.97)}60%{transform:scale(.975,1.03)}}
+@keyframes pop{0%{transform:scale(1);opacity:1}55%{transform:scale(1.16);opacity:1}100%{transform:scale(1.32);opacity:0}}
+@keyframes rise{to{transform:translateY(-70px) scale(.5);opacity:0}}
+
+.fab{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-fg);font-size:30px;line-height:1;cursor:pointer;box-shadow:var(--shadow);display:grid;place-items:center}
+.fab:active{transform:scale(.95)}
+
+/* graveyard */
+#grave{overflow-y:auto;padding:20px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.gwrap{max-width:720px;margin:0 auto}
+.gwrap h1{font:500 20px/1.2 var(--f-display);margin:0 0 4px;text-wrap:balance}
+.gwrap > p{margin:0 0 18px;color:var(--muted)}
+.glist{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.gcard{background:var(--dead-bg);color:var(--dead-fg);border:1px solid var(--dead-line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 0 0 1px var(--dead-glow),0 6px 22px var(--dead-glow);min-width:0}
+.gcard h3{margin:0;font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.gcard .gm{font-size:13px;opacity:.8;font-variant-numeric:tabular-nums}
+.gcard .ga{display:flex;gap:8px;margin-top:2px}
+.gcard button{border:1px solid var(--dead-line);background:transparent;color:var(--dead-fg);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer}
+.gcard button.rv{background:var(--dead);border-color:var(--dead);color:#fff}
+.gempty{color:var(--muted);padding:40px 0;text-align:center}
+.dots{letter-spacing:2px;font-size:11px}
+
+/* sheets */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20;opacity:0;transition:opacity .2s}
+.scrim.open{opacity:1}
+.sheet{position:fixed;left:50%;bottom:0;z-index:21;width:min(460px,100%);transform:translate(-50%,105%);transition:transform .24s cubic-bezier(.2,.8,.3,1);background:var(--surface);border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:var(--shadow);max-height:92%;overflow-y:auto;display:flex;flex-direction:column;gap:16px;border:0;margin:0}
+.sheet.open{transform:translate(-50%,0)}
+@media (min-width:700px){.sheet{bottom:50%;border-radius:20px;transform:translate(-50%,calc(50% + 24px));opacity:0;transition:transform .22s,opacity .22s}.sheet.open{transform:translate(-50%,50%);opacity:1}}
+.sheet h2{margin:0;font:500 19px/1.25 var(--f-display);text-wrap:balance;overflow-wrap:anywhere}
+.eyebrow{margin:0 0 -10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.field{display:flex;flex-direction:column;gap:8px;border:0;padding:0;margin:0;min-width:0}
+.field > span,.field legend,.field > label{font-size:13px;font-weight:600;color:var(--muted);padding:0}
+.field legend{margin-bottom:8px}
+input[type=text],input[type=datetime-local]{width:100%;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:11px 12px;min-width:0}
+.imp{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;padding:0 4px}
+.imp label{flex:1;display:grid;place-items:center;cursor:pointer;height:52px}
+.imp input{position:absolute;opacity:0;pointer-events:none}
+.imp span{display:block;border-radius:50%;border:1.5px solid var(--line);background:var(--bg);transition:.15s}
+.imp input:checked + span{border-color:var(--accent);background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.9) 0 10%,transparent 24%),color-mix(in srgb,var(--accent) 35%,transparent)}
+.imp input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.impcap{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer}
+.chips button:hover{border-color:var(--accent)}
+.hint{margin:0;font-size:13px;color:var(--muted);min-height:1.45em}
+.hint.err{color:var(--dead)}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:transparent;border-radius:12px;padding:10px 16px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.del{margin-right:auto;color:var(--dead);border-color:transparent;padding-left:4px}
+.btn.del.confirm{border-color:var(--dead)}
+dl.meta{margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+dl.meta dt{font-size:12px;color:var(--muted);font-weight:600}
+dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
+
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;z-index:30;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;transition:.25s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:420px){.legend .wide{display:none}.brand span{display:none}.seg button{padding:6px 10px}}
+@media (prefers-reduced-motion:reduce){.skin::before,.bubble.urgent .skin{animation:none}.sheet,.scrim,.toast{transition:none}}
+</style>
+</head>
+<body>
+
+
+<div class="app" lang="ru">
+  <header class="top">
+    <div class="brand"><i></i><span>Tasky</span></div>
+    <nav class="seg" role="tablist" aria-label="Разделы">
+      <button role="tab" id="tab-board" aria-selected="true" aria-controls="board">Доска <b id="c-board"></b></button>
+      <button role="tab" id="tab-grave" aria-selected="false" aria-controls="grave">Мёртвые <b id="c-grave" class="deadc"></b></button>
+    </nav>
+    <span class="donec" id="c-done" title="Выполнено задач">✓ 0</span>
+  </header>
+  <main>
+    <section id="board" class="view" role="tabpanel" aria-label="Доска задач">
+      <div class="banner" id="banner" hidden>Это примеры задач <button type="button" id="clearEx">Убрать</button></div>
+      <div class="empty" id="empty" hidden><div><strong>Доска пуста</strong>Нажмите «+», чтобы надуть первый пузырь.</div></div>
+      <p class="legend">Размер пузыря — важность и близость дедлайна.<span class="wide"> Пузыри можно перетаскивать.</span></p>
+      <button class="fab" id="fab" type="button" aria-label="Добавить задачу">+</button>
+    </section>
+    <section id="grave" class="view" role="tabpanel" aria-label="Мёртвые задачи" hidden>
+      <div class="gwrap">
+        <h1>Мёртвые задачи</h1>
+        <p>Пузыри, которые лопнули, потому что дедлайн прошёл. Задачу можно воскресить с новым сроком.</p>
+        <div class="glist" id="glist"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<form class="sheet" id="form" hidden novalidate>
+  <h2 id="f-heading">Новая задача</h2>
+  <label class="field"><span>Что нужно сделать</span><input type="text" id="f-title" maxlength="80" autocomplete="off" placeholder="Например, сдать отчёт"></label>
+  <fieldset class="field">
+    <legend>Важность</legend>
+    <div class="imp" id="f-imp"></div>
+    <div class="impcap"><span>мелочь</span><span>очень важно</span></div>
+  </fieldset>
+  <div class="field">
+    <label for="f-deadline">Дедлайн</label>
+    <div class="chips" id="chips">
+      <button type="button" data-q="1h">Через час</button>
+      <button type="button" data-q="eve">Сегодня вечером</button>
+      <button type="button" data-q="tom">Завтра</button>
+      <button type="button" data-q="week">Через неделю</button>
+    </div>
+    <input type="datetime-local" id="f-deadline">
+  </div>
+  <p class="hint" id="f-hint"></p>
+  <div class="actions">
+    <button type="button" class="btn" data-close>Отмена</button>
+    <button type="submit" class="btn primary" id="f-submit">Надуть пузырь</button>
+  </div>
+</form>
+
+<div class="sheet" id="detail" role="dialog" aria-labelledby="d-title" hidden>
+  <p class="eyebrow">Задача</p>
+  <h2 id="d-title"></h2>
+  <dl class="meta">
+    <div><dt>Важность</dt><dd id="d-imp"></dd></div>
+    <div><dt>Дедлайн</dt><dd id="d-dl"></dd></div>
+    <div><dt>Осталось</dt><dd id="d-left"></dd></div>
+  </dl>
+  <div class="actions">
+    <button type="button" class="btn del" id="d-del">Удалить</button>
+    <button type="button" class="btn" id="d-edit">Изменить</button>
+    <button type="button" class="btn primary" id="d-done">Выполнено</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  const KEY = 'tasky.v1';
+  const H = 3600e3, D = 24 * H;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+  function load(){ try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(tasks)); } catch (e) {} }
+
+  function seed(){
+    const n = Date.now();
+    const mk = (title, imp, createdAgo, inMs, extra) => Object.assign({ id: uid(), title, imp, created: n - createdAgo, deadline: n + inMs, status: 'active', ex: true }, extra || {});
+    return [
+      mk('Сдать квартальный отчёт', 5, 3 * D, 26 * H),
+      mk('Купить подарок маме', 4, 2 * D, 5 * H),
+      mk('Записаться к стоматологу', 3, 1 * D, 3 * D),
+      mk('Пробежка 5 км', 2, 6 * H, 2 * D),
+      mk('Прочитать «Мастера и Маргариту»', 2, 5 * D, 20 * D),
+      mk('Полить цветы', 1, 1 * H, 40e3),
+      mk('Оплатить интернет', 3, 4 * D, -1 * D, { status: 'dead', diedAt: n - D })
+    ];
+  }
+
+  let tasks = load();
+  if (!Array.isArray(tasks)) { tasks = seed(); save(); }
+
+  // ---------- formatting ----------
+  function leftStr(ms, long){
+    if (ms <= 0) return 'время вышло';
+    const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    if (d > 0) return d + ' д ' + h + ' ч';
+    if (h > 0) return h + ' ч ' + m + ' мин';
+    if (m >= 10 || (!long && m > 0)) return m + ' мин';
+    if (m > 0) return m + ' мин ' + sec + ' с';
+    return sec + ' с';
+  }
+  function agoStr(ms){ const s = leftStr(ms, false); return s === 'время вышло' ? 'только что' : s; }
+  const dtFmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const fmtDate = t => dtFmt.format(new Date(t));
+  const dots = n => '●'.repeat(n) + '○'.repeat(5 - n);
+  function toLocalInput(t){ const d = new Date(t), p = x => String(x).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+
+  // ---------- size model ----------
+  // proximity 0..1: half from elapsed share of the task's own window, half from absolute time left (1 day left = 0.5)
+  function prox(t, now){
+    const el = Math.min(1, Math.max(0, (now - t.created) / Math.max(1, t.deadline - t.created)));
+    const ab = 1 / (1 + Math.max(0, t.deadline - now) / D);
+    return 0.5 * el + 0.5 * ab;
+  }
+  const rawR = (t, now) => { const p = prox(t, now); return (0.55 + 0.22 * t.imp) * (1 + 1.1 * p * p); };
+
+  // ---------- board ----------
+  const board = $('#board');
+  let W = 0, HH = 0;
+  const bubbles = new Map();
+  let drag = null;
+  new ResizeObserver(() => { W = board.clientWidth; HH = board.clientHeight; }).observe(board);
+
+  function makeBubble(t){
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'bubble';
+    el.innerHTML = '<span class="skin"></span><span class="label"><span class="bt"></span><span class="bl"></span></span>';
+    el.querySelector('.bt').textContent = t.title;
+    const b = { t, el, r: 4, tr: 40, vx: 0, vy: 0, ph: Math.random() * 6.28, sp: 0.6 + Math.random() * 0.8, last: '', fs: 0 };
+    b.x = W ? 60 + Math.random() * Math.max(1, W - 120) : 100;
+    b.y = HH ? 60 + Math.random() * Math.max(1, HH - 120) : 100;
+    el.addEventListener('pointerdown', e => {
+      if (b.leaving) return;
+      drag = { b, sx: e.clientX, sy: e.clientY, ox: b.x, oy: b.y, moved: false };
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    el.addEventListener('pointermove', e => {
+      if (!drag || drag.b !== b) return;
+      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; el.classList.add('dragging'); }
+      if (drag.moved) { b.x = drag.ox + dx; b.y = drag.oy + dy; b.vx = b.vy = 0; }
+    });
+    const end = open => () => {
+      if (!drag || drag.b !== b) return;
+      const moved = drag.moved; drag = null; el.classList.remove('dragging');
+      if (open && !moved && !b.leaving) openDetail(b.t.id);
+    };
+    el.addEventListener('pointerup', end(true));
+    el.addEventListener('pointercancel', end(false));
+    el.addEventListener('click', e => { if (e.detail === 0 && !b.leaving) openDetail(b.t.id); });
+    board.insertBefore(el, $('#fab'));
+    bubbles.set(t.id, b);
+    return b;
+  }
+
+  function sync(){
+    const active = tasks.filter(t => t.status === 'active');
+    const ids = new Set(active.map(t => t.id));
+    for (const [id, b] of bubbles) if (!ids.has(id) && !b.leaving) { b.el.remove(); bubbles.delete(id); }
+    for (const t of active) { const b = bubbles.get(t.id); if (!b) makeBubble(t); else { b.t = t; b.el.querySelector('.bt').textContent = t.title; } }
+    counts();
+  }
+
+  function counts(){
+    const a = tasks.filter(t => t.status === 'active').length;
+    const g = tasks.filter(t => t.status === 'dead').length;
+    const d = tasks.filter(t => t.status === 'done').length;
+    $('#c-board').textContent = a || '';
+    $('#c-grave').textContent = g || '';
+    $('#c-done').textContent = '✓ ' + d;
+    $('#empty').hidden = a > 0;
+    $('#banner').hidden = !tasks.some(t => t.ex);
+  }
+
+  function layoutTargets(now){
+    const list = [...bubbles.values()].filter(b => !b.leaving);
+    if (!list.length || !W) return;
+    const Dm = Math.min(W, HH);
+    let sumA = 0;
+    for (const b of list) { b.raw = rawR(b.t, now); sumA += Math.PI * b.raw * b.raw; }
+    const s = Math.min(Math.sqrt(0.36 * W * HH / sumA), Dm * 0.11);
+    for (const b of list) b.tr = Math.max(Math.max(34, Dm * 0.1), Math.min(b.raw * s, Dm * 0.32));
+  }
+
+  function physics(time){
+    const list = [...bubbles.values()];
+    const cx = W / 2, cy = HH / 2;
+    for (const b of list) {
+      if (b.leaving) continue;
+      b.r += (b.tr - b.r) * 0.06;
+      if (drag && drag.b === b && drag.moved) continue;
+      if (!reduce) {
+        b.vx += Math.cos(b.ph + time * 0.00035 * b.sp) * 0.012;
+        b.vy += Math.sin(b.ph * 1.3 + time * 0.0003 * b.sp) * 0.012 - 0.002;
+      }
+      b.vx += (cx - b.x) * 0.00003; b.vy += (cy - b.y) * 0.00003;
+    }
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], c = list[j];
+      if (a.leaving || c.leaving) continue;
+      let dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy) || 0.01;
+      const min = a.r + c.r + 6;
+      if (d < min) {
+        const f = (min - d) / d * 0.06;
+        const aFixed = drag && drag.b === a && drag.moved, cFixed = drag && drag.b === c && drag.moved;
+        if (!aFixed) { a.vx -= dx * f * (cFixed ? 2 : 1); a.vy -= dy * f * (cFixed ? 2 : 1); }
+        if (!cFixed) { c.vx += dx * f * (aFixed ? 2 : 1); c.vy += dy * f * (aFixed ? 2 : 1); }
+      }
+    }
+    for (const b of list) {
+      if (b.leaving) continue;
+      const held = drag && drag.b === b && drag.moved;
+      if (!held) {
+        b.vx *= 0.92; b.vy *= 0.92;
+        const vm = Math.hypot(b.vx, b.vy); if (vm > 6) { b.vx *= 6 / vm; b.vy *= 6 / vm; }
+        b.x += b.vx; b.y += b.vy;
+      }
+      if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx) * 0.4; }
+      if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx) * 0.4; }
+      if (b.y < b.r) { b.y = b.r; b.vy = Math.abs(b.vy) * 0.4; }
+      if (b.y > HH - b.r) { b.y = HH - b.r; b.vy = -Math.abs(b.vy) * 0.4; }
+    }
+  }
+
+  function render(now){
+    for (const b of bubbles.values()) {
+      const el = b.el, r = b.r;
+      el.style.width = el.style.height = (2 * r) + 'px';
+      el.style.transform = 'translate(' + (b.x - r) + 'px,' + (b.y - r) + 'px)';
+      if (b.leaving) continue;
+      const p = prox(b.t, now);
+      el.style.setProperty('--h', Math.round(205 + 55 * p));
+      const fs = Math.round(Math.max(10, Math.min(20, r * 0.19)));
+      if (fs !== b.fs) { b.fs = fs; el.querySelector('.bt').style.fontSize = fs + 'px'; el.querySelector('.bl').style.fontSize = Math.round(fs * 0.74) + 'px'; }
+      const ms = b.t.deadline - now;
+      const txt = r < 36 ? '' : leftStr(ms, false);
+      if (txt !== b.last) { b.last = txt; el.querySelector('.bl').textContent = txt; }
+      el.classList.toggle('urgent', ms < H);
+      el.setAttribute('aria-label', b.t.title + ', важность ' + b.t.imp + ' из 5, осталось ' + leftStr(ms, true));
+    }
+  }
+
+  function popAnim(b){
+    b.leaving = true;
+    const el = b.el;
+    el.classList.remove('urgent');
+    el.classList.add('pop');
+    const h = getComputedStyle(el).getPropertyValue('--h') || 220;
+    if (!reduce) {
+      const ring = document.createElement('div');
+      ring.className = 'ring'; ring.style.setProperty('--h', h);
+      ring.style.width = ring.style.height = 2 * b.r + 'px';
+      board.appendChild(ring);
+      ring.animate([{ transform: `translate(${b.x - b.r}px,${b.y - b.r}px) scale(1)`, opacity: .9 }, { transform: `translate(${b.x - b.r}px,${b.y - b.r}px) scale(1.55)`, opacity: 0 }], { duration: 450, easing: 'ease-out' }).onfinish = () => ring.remove();
+      const n = 18;
+      for (let i = 0; i < n; i++) {
+        const d = document.createElement('div');
+        d.className = 'drop'; d.style.setProperty('--h', h);
+        const sz = 4 + Math.random() * 7; d.style.width = d.style.height = sz + 'px';
+        board.appendChild(d);
+        const a = (i / n) * 6.283 + Math.random() * 0.3, r0 = b.r * 0.95, r1 = b.r * (1.3 + Math.random() * 0.7);
+        const x0 = b.x + Math.cos(a) * r0 - sz / 2, y0 = b.y + Math.sin(a) * r0 - sz / 2;
+        const x1 = b.x + Math.cos(a) * r1 - sz / 2, y1 = b.y + Math.sin(a) * r1 - sz / 2 + 30;
+        d.animate([{ transform: `translate(${x0}px,${y0}px) scale(1)`, opacity: 1 }, { transform: `translate(${x1}px,${y1}px) scale(.3)`, opacity: 0 }], { duration: 520 + Math.random() * 300, easing: 'cubic-bezier(.2,.7,.3,1)', delay: 110 }).onfinish = () => d.remove();
+      }
+    }
+    setTimeout(() => { el.remove(); bubbles.delete(b.t.id); }, 420);
+  }
+
+  function doneAnim(b){
+    b.leaving = true;
+    b.el.classList.remove('urgent');
+    b.el.classList.add('done');
+    setTimeout(() => { b.el.remove(); bubbles.delete(b.t.id); }, reduce ? 0 : 900);
+  }
+
+  function expire(now){
+    let changed = false;
+    for (const t of tasks) {
+      if (t.status === 'active' && now >= t.deadline) {
+        t.status = 'dead'; t.diedAt = t.deadline; changed = true;
+        const b = bubbles.get(t.id);
+        if (b && !b.leaving) { if (view === 'board') popAnim(b); else { b.el.remove(); bubbles.delete(t.id); } }
+        toast('Пузырь «' + t.title + '» лопнул');
+        if (openId === t.id) closeSheets();
+      }
+    }
+    if (changed) { save(); counts(); renderGrave(); }
+  }
+
+  let lastT = 0;
+  function frame(time){
+    const now = Date.now();
+    expire(now);
+    if (view === 'board' && W) {
+      if (time - lastT > 250) { layoutTargets(now); lastT = time; }
+      physics(time);
+      render(now);
+    }
+    if (openId) { const t = tasks.find(x => x.id === openId); if (t) $('#d-left').textContent = leftStr(t.deadline - now, true); }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- graveyard ----------
+  function renderGrave(){
+    const list = tasks.filter(t => t.status === 'dead').sort((a, b) => b.diedAt - a.diedAt);
+    const now = Date.now();
+    $('#glist').innerHTML = list.length ? list.map(t => `
+      <article class="gcard">
+        <h3>${esc(t.title)}</h3>
+        <div class="gm"><span class="dots" aria-label="Важность ${t.imp} из 5">${dots(t.imp)}</span> · лопнул ${fmtDate(t.diedAt)}</div>
+        <div class="gm">Мертва уже ${agoStr(now - t.diedAt)}</div>
+        <div class="ga"><button type="button" class="rv" data-rv="${t.id}">Воскресить</button><button type="button" data-rm="${t.id}">Удалить</button></div>
+      </article>`).join('') : '<p class="gempty">Здесь пусто. Ни один пузырь пока не лопнул.</p>';
+  }
+  $('#glist').addEventListener('click', e => {
+    const rv = e.target.closest('[data-rv]'), rm = e.target.closest('[data-rm]');
+    if (rv) openForm('revive', rv.dataset.rv);
+    if (rm) {
+      if (rm.dataset.sure) { tasks = tasks.filter(t => t.id !== rm.dataset.rm); save(); renderGrave(); counts(); }
+      else { rm.dataset.sure = '1'; rm.textContent = 'Точно удалить?'; }
+    }
+  });
+
+  // ---------- views ----------
+  let view = 'board';
+  function setView(v){
+    view = v;
+    $('#tab-board').setAttribute('aria-selected', v === 'board');
+    $('#tab-grave').setAttribute('aria-selected', v === 'grave');
+    $('#board').hidden = v !== 'board';
+    $('#grave').hidden = v !== 'grave';
+    if (v === 'grave') renderGrave();
+    try { localStorage.setItem(KEY + '.view', v); } catch (e) {}
+  }
+  $('#tab-board').onclick = () => setView('board');
+  $('#tab-grave').onclick = () => setView('grave');
+
+  $('#clearEx').onclick = () => {
+    tasks = tasks.filter(t => !t.ex); save(); sync(); renderGrave(); toast('Примеры убраны');
+  };
+
+  // ---------- sheets ----------
+  let openId = null, formMode = 'new', formId = null;
+  const scrim = $('#scrim');
+  function showSheet(el){
+    scrim.hidden = false; el.hidden = false;
+    requestAnimationFrame(() => { scrim.classList.add('open'); el.classList.add('open'); });
+  }
+  function closeSheets(){
+    openId = null;
+    for (const el of [$('#form'), $('#detail'), scrim]) {
+      if (el.hidden) continue;
+      el.classList.remove('open');
+      setTimeout(() => { if (!el.classList.contains('open')) el.hidden = true; }, reduce ? 0 : 240);
+    }
+  }
+  scrim.onclick = closeSheets;
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
+
+  // importance picker: five circles of growing size, like the bubbles they make
+  $('#f-imp').innerHTML = [1, 2, 3, 4, 5].map(i => `<label title="Важность ${i}"><input type="radio" name="imp" id="imp-${i}" value="${i}"><span style="width:${14 + i * 7}px;height:${14 + i * 7}px"></span></label>`).join('');
+
+  function quick(q){
+    const d = new Date();
+    if (q === '1h') return Date.now() + H;
+    if (q === 'eve') { d.setHours(21, 0, 0, 0); if (d.getTime() < Date.now() + 15 * 60e3) d.setDate(d.getDate() + 1); return d.getTime(); }
+    if (q === 'tom') { d.setDate(d.getDate() + 1); d.setHours(12, 0, 0, 0); return d.getTime(); }
+    if (q === 'week') { d.setDate(d.getDate() + 7); d.setSeconds(0, 0); return d.getTime(); }
+  }
+  $('#chips').onclick = e => { const b = e.target.closest('[data-q]'); if (b) { $('#f-deadline').value = toLocalInput(quick(b.dataset.q)); hint(); } };
+
+  function hint(err){
+    const h = $('#f-hint');
+    if (err) { h.textContent = err; h.className = 'hint err'; return; }
+    const v = $('#f-deadline').value;
+    h.className = 'hint';
+    if (!v) { h.textContent = ''; return; }
+    const ms = new Date(v).getTime() - Date.now();
+    h.textContent = ms > 0 ? 'Пузырь лопнет через ' + leftStr(ms, true) + ', если не отметить задачу выполненной.' : 'Это время уже прошло. Выберите момент позже.';
+    if (ms <= 0) h.className = 'hint err';
+  }
+  $('#f-deadline').addEventListener('input', () => hint());
+
+  function openForm(mode, id){
+    closeSheets();
+    formMode = mode; formId = id || null;
+    const t = id ? tasks.find(x => x.id === id) : null;
+    $('#f-heading').textContent = mode === 'edit' ? 'Изменить задачу' : mode === 'revive' ? 'Воскресить задачу' : 'Новая задача';
+    $('#f-submit').textContent = mode === 'edit' ? 'Сохранить' : mode === 'revive' ? 'Воскресить' : 'Надуть пузырь';
+    $('#f-title').value = t ? t.title : '';
+    $('#imp-' + (t ? t.imp : 3)).checked = true;
+    $('#f-deadline').value = toLocalInput(mode === 'edit' && t ? t.deadline : quick('tom'));
+    hint();
+    setTimeout(() => showSheet($('#form')), 0);
+    if (matchMedia('(pointer:fine)').matches) setTimeout(() => $('#f-title').focus(), 60);
+  }
+  $('#fab').onclick = () => openForm('new');
+
+  $('#form').addEventListener('submit', e => {
+    e.preventDefault();
+    const title = $('#f-title').value.trim();
+    const imp = +(document.querySelector('input[name=imp]:checked') || { value: 3 }).value;
+    const dl = new Date($('#f-deadline').value).getTime();
+    if (!title) { hint('Напишите, что нужно сделать.'); $('#f-title').focus(); return; }
+    if (!dl || isNaN(dl)) { hint('Укажите дедлайн.'); return; }
+    if (dl <= Date.now()) { hint('Это время уже прошло. Выберите момент позже.'); return; }
+    const now = Date.now();
+    if (formMode === 'new') {
+      tasks.push({ id: uid(), title, imp, created: now, deadline: dl, status: 'active' });
+      toast('Пузырь надут');
+    } else {
+      const t = tasks.find(x => x.id === formId);
+      if (t) {
+        t.title = title; t.imp = imp; delete t.ex;
+        if (formMode === 'revive') { t.status = 'active'; t.created = now; t.deadline = dl; delete t.diedAt; toast('Задача снова на доске'); setView('board'); }
+        else { if (dl !== t.deadline && dl - now > t.deadline - t.created) t.created = now; t.deadline = dl; toast('Сохранено'); }
+      }
+    }
+    save(); sync(); renderGrave(); closeSheets();
+  });
+
+  function openDetail(id){
+    const t = tasks.find(x => x.id === id); if (!t) return;
+    openId = id;
+    $('#d-title').textContent = t.title;
+    $('#d-imp').textContent = dots(t.imp);
+    $('#d-imp').setAttribute('aria-label', t.imp + ' из 5');
+    $('#d-dl').textContent = fmtDate(t.deadline);
+    $('#d-left').textContent = leftStr(t.deadline - Date.now(), true);
+    const del = $('#d-del'); del.textContent = 'Удалить'; del.classList.remove('confirm');
+    showSheet($('#detail'));
+  }
+  $('#d-done').onclick = () => {
+    const t = tasks.find(x => x.id === openId); if (!t) return;
+    t.status = 'done'; t.doneAt = Date.now(); save();
+    const b = bubbles.get(t.id); closeSheets();
+    if (b) doneAnim(b);
+    counts(); toast('Готово! Задача выполнена');
+  };
+  $('#d-edit').onclick = () => { const id = openId; openForm('edit', id); };
+  $('#d-del').onclick = () => {
+    const del = $('#d-del');
+    if (!del.classList.contains('confirm')) { del.classList.add('confirm'); del.textContent = 'Точно удалить?'; return; }
+    const id = openId;
+    tasks = tasks.filter(t => t.id !== id); save();
+    const b = bubbles.get(id); if (b) { b.el.remove(); bubbles.delete(id); }
+    closeSheets(); counts();
+  };
+
+  let toastTimer;
+  function toast(msg){
+    const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  // ---------- start ----------
+  let saved = 'board';
+  try { saved = localStorage.getItem(KEY + '.view') || 'board'; } catch (e) {}
+  W = board.clientWidth; HH = board.clientHeight;
+  sync();
+  for (const b of bubbles.values()) { b.x = 60 + Math.random() * Math.max(1, W - 120); b.y = 60 + Math.random() * Math.max(1, HH - 120); }
+  layoutTargets(Date.now());
+  for (const b of bubbles.values()) b.r = b.tr * 0.85;
+  renderGrave();
+  setView(saved === 'grave' ? 'grave' : 'board');
+  requestAnimationFrame(frame);
+})();
+</script>
+
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+</body>
+</html>
