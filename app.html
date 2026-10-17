@@ -389,14 +389,18 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
       if (!drag.moved && Math.hypot(dx, dy) > 6) { drag.moved = true; el.classList.add('dragging'); }
       if (drag.moved) { b.x = drag.ox + dx; b.y = drag.oy + dy; b.vx = b.vy = 0; }
     });
-    const end = open => () => {
+    const end = () => {
       if (!drag || drag.b !== b) return;
-      const moved = drag.moved; drag = null; el.classList.remove('dragging');
-      if (open && !moved && !b.leaving) openDetail(b.t.id);
+      b.dragged = drag.moved; drag = null; el.classList.remove('dragging');
     };
-    el.addEventListener('pointerup', end(true));
-    el.addEventListener('pointercancel', end(false));
-    el.addEventListener('click', e => { if (e.detail === 0 && !b.leaving) openDetail(b.t.id); });
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    // open on click, not pointerup: on touch screens the click that follows a tap
+    // would otherwise land on the freshly opened sheet's backdrop and close it half-way
+    el.addEventListener('click', () => {
+      if (b.dragged) { b.dragged = false; return; }
+      if (!b.leaving) openDetail(b.t.id);
+    });
     board.insertBefore(el, $('#fab'));
     bubbles.set(t.id, b);
     return b;
@@ -715,6 +719,7 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
   let openId = null, formMode = 'new', formId = null;
   const scrim = $('#scrim');
   function showSheet(el){
+    shownAt = Date.now();
     scrim.hidden = false; el.hidden = false;
     requestAnimationFrame(() => { scrim.classList.add('open'); el.classList.add('open'); });
   }
@@ -726,7 +731,8 @@ dl.meta dd{margin:2px 0 0;font-weight:600;font-variant-numeric:tabular-nums}
       setTimeout(() => { if (!el.classList.contains('open')) el.hidden = true; }, reduce ? 0 : 240);
     }
   }
-  scrim.onclick = closeSheets;
+  let shownAt = 0;
+  scrim.onclick = () => { if (Date.now() - shownAt > 350) closeSheets(); };
   document.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheets);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
 
